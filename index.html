@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LUMI — Protótipo (single-file)</title>
+  <meta name="theme-color" content="#0f1220" />
+  <style>
+    :root{--bg:#0f1220;--panel:#171a2b;--soft:#222641;--text:#e9ecff;--muted:#b9c0ff;
+      --accent:#7c8cff;--accent-2:#8ef3ff;--like:#ffd1f7;--radius:18px;--shadow:0 10px 24px rgba(0,0,0,.35);}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:sans-serif}
+    header{background:#171a2b;padding:12px;display:flex;justify-content:space-between;align-items:center}
+    .logo{font-weight:700}.grid{display:grid;grid-template-columns:1fr 2fr 1fr;gap:16px;padding:16px}
+    .card{background:var(--panel);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow)}
+    textarea{width:100%;padding:8px;background:var(--soft);color:var(--text);border:none;border-radius:12px}
+    .post{border-top:1px solid #333;padding:8px 0}.avatar{width:40px;height:40px;border-radius:50%;background:#7c8cff;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+    .meta{font-size:12px;color:var(--muted)}.actions button{margin-right:8px}
+  </style>
+</head>
+<body>
+<header><div class="logo">🌌 LUMI</div><div>Protótipo</div></header>
+<main class="grid">
+  <aside class="card">Circles<br>✦ Amigos<br>✦ Escola<br>✦ Família</aside>
+  <section>
+    <div class="card">
+      <h3>Criar Spark</h3>
+      <textarea id="composer" maxlength="280" placeholder="O que está a acontecer?"></textarea>
+      <button onclick="publish()">Publicar</button>
+    </div>
+    <div class="card" id="feed"><h3>Feed</h3></div>
+  </section>
+  <aside class="card">Tendências<br>#backtoschool<br>#lumiart</aside>
+</main>
+<script>
+  const feed=document.getElementById('feed');let id=0;
+  function publish(){
+    const text=document.getElementById('composer').value.trim();
+    if(!text)return;
+    const post={id:++id,author:"Você",text,likes:0};
+    render(post);document.getElementById('composer').value="";
+  }
+  function render(p){
+    const el=document.createElement('div');el.className="post";
+    el.innerHTML=`<div class="avatar">VC</div> <b>${p.author}</b><div class="meta">@voce</div>
+      <div>${p.text}</div><div class="actions"><button onclick="like(${p.id},this)">⚡ ${p.likes}</button></div>`;
+    feed.appendChild(el);
+  }
+  function like(id,btn){let n=parseInt(btn.textContent.split(" ")[1]);n++;btn.textContent="⚡ "+n;}
+</script>
+</body>
+</html>
