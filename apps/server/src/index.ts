@@ -1,0 +1,12 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config';
+import routes from './routes';
+import { errorHandler } from './middleware/error';
+const app = express();
+app.use(cors()); app.use(helmet()); app.use(express.json());
+app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use('/api', routes);
+app.use(errorHandler);
+app.listen(config.port, () => { console.log(`Server http://localhost:${config.port}`); });
