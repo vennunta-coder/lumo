@@ -1,28 +1,728 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lumo - Rede Social Segura</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>EduAV Pro — Antivírus (Simulação + Modo Jogo)</title>
+  <style>
+    /* =====================
+       Design System (Pro)
+       ===================== */
+    :root {
+      --bg: #0b1020;           /* Surface background */
+      --panel: #0f172a;        /* Panels/cards */
+      --panel-2: #111827;      /* Elevated */
+      --text: #e5e7eb;         /* Primary text */
+      --muted: #9aa3b2;        /* Secondary text */
+      --border: rgba(148,163,184,.18);
+      --brand: #60a5fa;        /* Primary */
+      --brand-2: #34d399;      /* Accent */
+      --ok: #22c55e;           /* Success */
+      --warn: #fbbf24;         /* Warning */
+      --danger: #ef4444;       /* Danger */
+      --chip: #1f2a44;         /* Pills */
+      --radius: 16px;          /* Corners */
+      --shadow: 0 12px 36px rgba(0,0,0,.45);
+      --focus: 0 0 0 3px rgba(96,165,250,.55);
+      --game: #a78bfa;         /* Game accent */
+    }
+    [data-theme="light"]{
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #ffffff;
+      --text: #0b1220;
+      --muted: #566172;
+      --border: rgba(2,8,23,.12);
+      --brand: #2563eb;
+      --brand-2: #059669;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --chip: #eef2ff;
+      --shadow: 0 10px 28px rgba(2,8,23,.08);
+      --focus: 0 0 0 3px rgba(37,99,235,.35);
+      --game: #7c3aed;
+    }
+    @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans";
+      line-height: 1.45;
+    }
+    a { color: inherit; }
+    :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 10px; }
+
+    /* Layout */
+    .app { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
+    header.appbar {
+      grid-column: 1 / -1; display: grid; grid-template-columns: 280px 1fr; position: sticky; top: 0; z-index: 20;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--panel-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .appbar .left { padding: 14px 18px; border-right: 1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .appbar .right { padding: 10px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+    .logo { width: 34px; height: 34px; display:grid; place-items:center; border-radius: 12px; background: radial-gradient(100% 100% at 0% 0%, var(--brand) 0%, var(--brand-2) 100%); box-shadow: var(--shadow); }
+    .title { font-weight: 800; letter-spacing:.2px; }
+    .subtitle { color: var(--muted); font-size: 12px; }
+
+    aside.sidebar { background: linear-gradient(180deg, var(--panel), transparent 60%), var(--panel); border-right: 1px solid var(--border); padding: 14px 14px 80px; position: relative; }
+    .statusline { font-size: 12px; color: var(--muted); margin: 10px 0 14px; display:flex; align-items:center; gap:8px; }
+    .dot { width:10px; height:10px; border-radius:999px; background: var(--ok); box-shadow: 0 0 0 6px rgba(34,197,94,.15); }
+
+    nav.nav { display:flex; flex-direction:column; gap: 6px; }
+    nav.nav button { border: none; background: transparent; color: var(--text); width: 100%; text-align:left; padding: 12px; border-radius: 12px; display:flex; align-items:center; gap: 12px; font-size: 15px; cursor:pointer; }
+    nav.nav button:hover { background: rgba(148,163,184,.08); }
+    nav.nav button.active { background: rgba(96,165,250,.15); outline: 1px solid rgba(96,165,250,.25); }
+    nav.nav button[data-view="game"].active { background: rgba(167,139,250,.18); outline-color: rgba(167,139,250,.35); }
+
+    main.content { padding: 20px; overflow:auto; }
+    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+
+    .card { background: var(--panel); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card h3 { margin: 0 0 8px 0; font-size: 16px; letter-spacing:.2px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .toolbar { display:flex; flex-wrap: wrap; gap: 8px; }
+
+    .btn { border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0)); color: var(--text); border-radius: 12px; padding: 10px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; font-weight:600; }
+    .btn:hover { filter: brightness(1.05); }
+    .btn.brand { border-color: rgba(96,165,250,.35); background: linear-gradient(180deg, rgba(96,165,250,.15), rgba(96,165,250,.05)); }
+    .btn.ghost { background: transparent; }
+    .btn.warn { border-color: rgba(251,191,36,.5); }
+    .btn.danger { border-color: rgba(248,113,113,.5); }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+
+    .switch { position: relative; width: 48px; height: 28px; background: rgba(148,163,184,.35); border-radius: 999px; transition: .2s ease; cursor: pointer; border: 1px solid var(--border); }
+    .switch[data-on="true"] { background: rgba(34,197,94,.35); border-color: rgba(34,197,94,.5); }
+    .switch .knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 999px; transition: .2s ease; }
+    .switch[data-on="true"] .knob { left: 23px; }
+
+    .progress { height: 10px; background: rgba(148,163,184,.2); border-radius: 999px; overflow: hidden; }
+    .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .25s ease; }
+
+    .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table th, .table td { border-bottom: 1px solid var(--border); padding: 10px 6px; text-align: left; }
+    .table th { user-select: none; cursor: pointer; }
+    .sev { font-weight: 700; }
+    .sev.low { color: var(--ok); }
+    .sev.med { color: var(--warn); }
+    .sev.high { color: var(--danger); }
+
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: rgba(148,163,184,.12); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+
+    /* Toasts */
+    .toasts { position: fixed; right: 18px; bottom: 18px; display:flex; flex-direction:column; gap:8px; z-index: 40; }
+    .toast { background: var(--panel-2); border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow); min-width: 260px; }
+
+    /* Modal */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items:center; justify-content:center; z-index: 50; }
+    .modal .dialog { background: var(--panel); border:1px solid var(--border); border-radius: 16px; padding: 16px; width: min(800px, 92vw); box-shadow: var(--shadow); }
+
+    /* ===== Game Mode ===== */
+    .badge { display:inline-flex; align-items:center; gap:6px; padding: 6px 10px; border-radius: 999px; font-size:12px; border:1px solid var(--border); background: rgba(167,139,250,.12); }
+    .badge .dot { box-shadow:none; width:8px; height:8px; background: var(--game); }
+    .hud { display:grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .hud .kpi { background: linear-gradient(180deg, rgba(167,139,250,.18), rgba(255,255,255,0)); border:1px solid rgba(167,139,250,.35); border-radius: 12px; padding: 10px; text-align:center; }
+    .hud .big { font-size: 22px; font-weight: 800; }
+    .gamewrap { position: relative; border-radius: 16px; overflow:hidden; background: radial-gradient(ellipse at top left, rgba(167,139,250,.15), rgba(96,165,250,.08), transparent 70%), var(--panel-2); border:1px solid var(--border); }
+    #gameCanvas { width: 100%; height: 440px; display:block; }
+    .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color: var(--text); background: rgba(0,0,0,.35); backdrop-filter: blur(2px); font-weight:800; letter-spacing:.3px; }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .app { grid-template-columns: 1fr; }
+      header.appbar { grid-template-columns: 1fr; }
+      aside.sidebar { position: sticky; top: 55px; z-index: 10; border-right: none; border-bottom: 1px solid var(--border); }
+      .hud { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
-<body class="bg-gray-50">
-  <nav class="navbar">
-    <div class="logo">🌟 Lumo</div>
-    <div class="links">
-      <a href="/login">Entrar</a>
-      <a href="/signup">Cadastrar</a>
+<body>
+  <header class="appbar" aria-label="Barra superior">
+    <div class="left">
+      <div class="logo" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.88L18.18 22 12 18.77 5.82 22 7 14.15l-5-4.88 6.91-1.01L12 2z" fill="white"/></svg>
+      </div>
+      <div>
+        <div class="title">EduAV Pro</div>
+        <div class="subtitle" id="subtitle">Antivírus — Simulação</div>
+      </div>
     </div>
-  </nav>
+    <div class="right">
+      <div class="muted" id="clock" aria-live="polite">—:—</div>
+      <div class="muted" id="lastUpdate">Base de assinaturas: —</div>
+    </div>
+  </header>
 
-  <main class="hero">
-    <h1>Bem-vindo ao <span class="brand">Lumo</span></h1>
-    <p>Uma rede social leve, criativa e segura para adolescentes.</p>
-    <a href="/signup" class="btn">Começar agora</a>
-  </main>
+  <div class="app" id="app" data-theme="dark">
+    <aside class="sidebar" role="navigation" aria-label="Menu principal">
+      <div class="statusline"><span class="dot" id="protectDot"></span><span id="protectText">Protegido (simulado)</span></div>
+      <nav class="nav" id="nav">
+        <button data-view="dashboard" class="active">🏠 <span data-i18n="dashboard">Painel</span></button>
+        <button data-view="scan">🔍 <span data-i18n="scans">Verificações</span></button>
+        <button data-view="realtime">🛡️ <span data-i18n="realtime">Proteção em Tempo Real</span></button>
+        <button data-view="analytics">📈 <span data-i18n="analytics">Analytics</span></button>
+        <button data-view="game">🎮 <span data-i18n="game">Modo Jogo</span></button>
+        <button data-view="quarantine">🗃️ <span data-i18n="quarantine">Quarentena</span></button>
+        <button data-view="reports">📊 <span data-i18n="reports">Relatórios</span></button>
+        <button data-view="updates">⬇️ <span data-i18n="updates">Atualizações</span></button>
+        <button data-view="settings">⚙️ <span data-i18n="settings">Definições</span></button>
+        <button data-view="about">❓ <span data-i18n="about">Sobre</span></button>
+      </nav>
+      <div class="subtitle" style="position:absolute; bottom: 14px; left: 14px; right: 14px;">ⓘ <span class="muted">Simulação educativa. Sem drivers nem monitorização real.</span></div>
+    </aside>
 
-  <footer>
-    <p>© 2025 Lumo. Todos os direitos reservados.</p>
-  </footer>
+    <main class="content" id="content">
+      <!-- ===== DASHBOARD ===== -->
+      <section id="view-dashboard" class="grid">
+        <div class="card" style="grid-column: span 7;">
+          <h3>Ações Rápidas</h3>
+          <div class="toolbar">
+            <button class="btn brand" id="btnQuickScan">🔎 Scan Rápido</button>
+            <button class="btn" id="btnFullScan">🧭 Scan Completo (simulado)</button>
+            <label class="btn ghost" for="fileInput">📂 Scan de Ficheiros…</label>
+            <input id="fileInput" type="file" multiple style="display:none" />
+            <span class="muted">Velocidade:</span>
+            <input id="speedRange" type="range" min="50" max="400" value="120" aria-label="Velocidade de simulação" />
+          </div>
+          <div style="margin-top:14px">
+            <div class="progress" aria-label="Progresso de varredura"><div id="scanProgress"></div></div>
+            <div class="muted" id="scanStatus" style="margin-top:8px">—</div>
+          </div>
+          <div style="margin-top:8px" class="muted">Atalhos: <span class="kbd">Q</span> rápido • <span class="kbd">F</span> completo • <span class="kbd">/</span> procurar • <span class="kbd">?</span> ajuda</div>
+        </div>
+
+        <div class="card" style="grid-column: span 5;">
+          <h3>Estado da Proteção</h3>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="switch" id="rtpSwitch" role="switch" aria-checked="true" tabindex="0" data-on="true"><span class="knob"></span></div>
+            <div>
+              <div id="rtpLabel"><b>Ativa</b> — <span class="muted">(indicador educativo)</span></div>
+              <div class="muted">Agendamento: <span id="schedText">diário às 09:00</span></div>
+              <div style="margin-top:10px" class="toolbar">
+                <input id="schedTime" type="time" value="09:00" aria-label="Hora do agendamento" />
+                <button class="btn" id="btnSaveSched">💾 Guardar</button>
+                <button class="btn ghost" id="btnRunNow">▶️ Executar agora</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="grid-column: span 4;">
+          <h3>Indicadores</h3>
+          <div class="muted">Ameaças (24h)</div>
+          <div style="font-size:36px; font-weight:800" id="threatsToday">0</div>
+          <div class="muted">Itens em Quarentena: <b id="qCount">0</b></div>
+          <div class="muted">Motor: <b id="engineVer">1.5.0-pro</b></div>
+        </div>
+        <div class="card" style="grid-column: span 8;">
+          <h3>Atividade Recente</h3>
+          <table class="table" id="lastTable"><thead>
+            <tr>
+              <th data-col="ts">Quando</th>
+              <th data-col="item">Item</th>
+              <th data-col="result">Resultado</th>
+            </tr>
+          </thead><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- ===== SCAN CENTER ===== -->
+      <section id="view-scan" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 8;">
+          <h3>Centro de Verificações</h3>
+          <p class="muted">As varreduras são simuladas e não afetam o sistema real.</p>
+          <div class="toolbar" style="margin-bottom:12px">
+            <button class="btn brand" id="scanQuick2">⚡ Scan Rápido</button>
+            <button class="btn" id="scanFull2">🧭 Scan Completo (simulado)</button>
+            <label class="btn ghost" for="fileInput2">📂 Scan de Ficheiros…</label>
+            <input id="fileInput2" type="file" multiple style="display:none" />
+          </div>
+          <div class="progress"><div id="scanProgress2"></div></div>
+          <div class="muted" id="scanStatus2" style="margin-top:8px">—</div>
+        </div>
+        <div class="card" style="grid-column: span 4;">
+          <h3>Últimos Resultados</h3>
+          <table class="table" id="lastTable2"><thead>
+            <tr><th>Quando</th><th>Item</th><th>Resultado</th></tr>
+          </thead><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- ===== REAL-TIME ===== -->
+      <section id="view-realtime" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 7;">
+          <h3>Proteção em Tempo Real</h3>
+          <p class="muted">Quando ativa, qualquer ficheiro que abrir aqui será verificado automaticamente antes da simulação de execução.</p>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
+            <div class="switch" id="rtpSwitch2" role="switch" aria-checked="true" tabindex="0" data-on="true"><span class="knob"></span></div>
+            <div id="rtpLabel2"><b>Ativa</b></div>
+          </div>
+          <label class="btn ghost" for="fileInputRTP">📂 Abrir Ficheiro…</label>
+          <input id="fileInputRTP" type="file" style="display:none" />
+          <div id="rtpResult" style="margin-top: 12px"></div>
+        </div>
+        <div class="card" style="grid-column: span 5;">
+          <h3>Nota</h3>
+          <p class="muted">Protótipo educativo em HTML/JS. Não substitui antivírus real, não monitoriza processos do sistema e não tem drivers.</p>
+        </div>
+      </section>
+
+      <!-- ===== ANALYTICS ===== -->
+      <section id="view-analytics" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 7;">
+          <h3>Deteções por Dia (7 dias)</h3>
+          <canvas id="threatChart" width="700" height="280" aria-label="Gráfico de deteções por dia" role="img"></canvas>
+        </div>
+        <div class="card" style="grid-column: span 5;">
+          <h3>Filtros</h3>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input id="logSearch" placeholder="Filtrar logs (/, item, ameaça, severidade)…" style="padding:10px 12px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border); min-width: 280px" />
+            <button class="btn" id="btnCopyReport">📋 Copiar resumo</button>
+          </div>
+          <div id="analyticsSummary" class="muted"></div>
+        </div>
+      </section>
+
+      <!-- ===== GAME MODE ===== -->
+      <section id="view-game" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 8;">
+          <h3>🎮 Modo Jogo <span class="badge"><span class="dot"></span> Arcade</span></h3>
+          <div class="toolbar" style="margin-bottom:10px">
+            <button class="btn brand" id="btnGameStart">▶️ Começar</button>
+            <button class="btn" id="btnGamePause">⏸️ Pausar</button>
+            <button class="btn ghost" id="btnGameReset">♻️ Reiniciar</button>
+            <label class="btn ghost" for="gameDiff">⚙️ Dificuldade</label>
+            <select id="gameDiff" style="padding:8px 10px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border)">
+              <option value="easy">Fácil</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Difícil</option>
+            </select>
+            <label class="btn ghost" for="gameSound">🔊 Som</label>
+            <div class="switch" id="gameSound" data-on="true" title="Som ligado"><span class="knob"></span></div>
+          </div>
+
+          <div class="hud" style="margin-bottom:10px">
+            <div class="kpi">Nível<div class="big" id="hudLevel">1</div></div>
+            <div class="kpi">XP<div class="big" id="hudXP">0</div></div>
+            <div class="kpi">Vidas<div class="big" id="hudLives">3</div></div>
+            <div class="kpi">Combo<div class="big" id="hudCombo">x0</div></div>
+            <div class="kpi">Tempo<div class="big" id="hudTime">60</div></div>
+          </div>
+
+          <div class="gamewrap">
+            <canvas id="gameCanvas" width="900" height="440"></canvas>
+            <div class="overlay" id="gameOverlay" hidden>Pressione ▶️ Começar</div>
+          </div>
+          <div class="muted" style="margin-top:8px">Objetivo: clique nas “ameaças” que caem para as <b>quarentenar</b>. Não deixe escapar! Boss a cada 5 níveis. Atalhos: <span class="kbd">SPACE</span> pausa/retoma • <span class="kbd">R</span> reinicia.</div>
+        </div>
+        <div class="card" style="grid-column: span 4;">
+          <h3>Progresso</h3>
+          <div class="muted">Melhor pontuação: <b id="hudHigh">0</b> • Melhor combo: <b id="hudBestCombo">0</b></div>
+          <h3 style="margin-top:12px">Conquistas</h3>
+          <ul id="achList" class="muted" style="padding-left:18px; line-height:1.6"></ul>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="btn" id="btnSaveScore">💾 Guardar pontuação</button>
+            <button class="btn ghost" id="btnExportSession">📤 Exportar sessão</button>
+          </div>
+          <p class="muted" style="margin-top:6px">Pontuação e conquistas são guardadas em <span class="kbd">localStorage</span>.</p>
+        </div>
+      </section>
+
+      <!-- ===== QUARANTINE ===== -->
+      <section id="view-quarantine" style="display:none">
+        <div class="card">
+          <h3>Quarentena</h3>
+          <table class="table" id="qTable"><thead>
+            <tr>
+              <th data-col="name">Item</th>
+              <th data-col="threat">Ameaça</th>
+              <th data-col="ts">Data</th>
+              <th>Ação</th>
+            </tr>
+          </thead><tbody></tbody></table>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="btn" id="btnExportQ">💾 Exportar Quarentena</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== REPORTS ===== -->
+      <section id="view-reports" style="display:none">
+        <div class="card">
+          <h3>Relatórios de Ameaças</h3>
+          <div class="toolbar" style="margin-bottom:8px">
+            <button class="btn" id="btnExport">💾 Exportar JSON</button>
+            <button class="btn ghost" id="btnClearLogs">🧹 Limpar Registos</button>
+          </div>
+          <table class="table" id="logTable"><thead>
+            <tr>
+              <th data-col="ts">Quando</th>
+              <th data-col="type">Tipo</th>
+              <th data-col="item">Item</th>
+              <th data-col="threat">Ameaça</th>
+              <th data-col="sev">Severidade</th>
+              <th data-col="result">Resultado</th>
+            </tr>
+          </thead><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- ===== UPDATES ===== -->
+      <section id="view-updates" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 7;">
+          <h3>Atualizações de Assinaturas</h3>
+          <p class="muted">Adicione hashes ou padrões simples (RegExp) à base local para simular novas detecções.</p>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input id="sigInput" placeholder="SHA256/MD5 ou regex (ex.: /EICAR/ i)" style="padding:10px 12px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border); min-width: 280px" />
+            <button class="btn brand" id="btnAddSig">➕ Adicionar</button>
+            <button class="btn" id="btnSimFeed">🛰️ Simular Feed</button>
+            <button class="btn ghost" id="btnExportSigs">💾 Exportar</button>
+            <label class="btn ghost" for="sigImport">📥 Importar</label>
+            <input id="sigImport" type="file" accept="application/json" style="display:none" />
+          </div>
+          <div id="sigList" class="muted" style="white-space: pre-wrap; font-family: ui-monospace, monospace"></div>
+        </div>
+        <div class="card" style="grid-column: span 5;">
+          <h3>Sobre o EICAR</h3>
+          <p class="muted">O ficheiro de teste EICAR é um padrão seguro usado para testar antivírus. Se fizer upload de um ficheiro com a cadeia EICAR, o EduAV Pro deverá detetá-lo.</p>
+          <code class="kbd">X5O!P%@AP[4&#92;PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*</code>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS & ABOUT ===== -->
+      <section id="view-settings" class="grid" style="display:none">
+        <div class="card" style="grid-column: span 6;">
+          <h3>Definições</h3>
+          <div style="display:grid; gap:12px">
+            <label style="display:flex; align-items:center; justify-content:space-between">
+              <span>Tema</span>
+              <select id="themeSel" style="padding:8px 10px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border)">
+                <option value="auto">Automático</option>
+                <option value="dark">Escuro</option>
+                <option value="light">Claro</option>
+              </select>
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between">
+              <span>Idioma</span>
+              <select id="langSel" style="padding:8px 10px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border)">
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between">
+              <span>Telemetria (simulada)</span>
+              <div class="switch" id="teleSwitch" data-on="false"><span class="knob"></span></div>
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between">
+              <span>Sensibilidade Heurística</span>
+              <select id="heurSel" style="padding:8px 10px; border-radius:10px; background:transparent; color:var(--text); border:1px solid var(--border)">
+                <option value="low">Baixa</option>
+                <option value="med">Média</option>
+                <option value="high">Alta</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="card" style="grid-column: span 6;">
+          <h3>Armazenamento Local</h3>
+          <div class="toolbar">
+            <button class="btn warn" id="btnReset">♻️ Repor Tudo</button>
+          </div>
+          <p class="muted">Configurações, registos e assinaturas são guardados no <span class="kbd">localStorage</span>.</p>
+        </div>
+      </section>
+
+      <section id="view-about" style="display:none">
+        <div class="card">
+          <h3>Sobre</h3>
+          <p>
+            <b>EduAV Pro</b> é uma <b>simulação educativa</b> de antivírus em HTML/CSS/JS, num único ficheiro. Não é um clone de qualquer produto comercial, não reutiliza marcas/logótipos/código de terceiros e destina‑se apenas a aprendizagem.
+          </p>
+          <ul>
+            <li>Deteção por hash <span class="kbd">SHA-256</span> e padrões simples (RegExp).</li>
+            <li>Suporte ao padrão de teste <span class="kbd">EICAR</span>.</li>
+            <li>Quarentena e relatórios simulados, export/ import de assinaturas.</li>
+            <li>Gráfico de deteções (7 dias), agendamento diário e <b>Modo Jogo</b> arcade.</li>
+          </ul>
+          <p class="muted">© 2025 • Licença: MIT • Este projeto é apenas para fins de aprendizagem.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toasts & Modal -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modaltitle">
+    <div class="dialog">
+      <h3 id="modaltitle">Detalhes</h3>
+      <pre id="modalpre" style="white-space: pre-wrap"></pre>
+      <div class="toolbar" style="margin-top:10px; justify-content:flex-end">
+        <button class="btn" id="btnCloseModal">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== I18N =====================
+    const I18N = {
+      pt: { dashboard:'Painel', scans:'Verificações', realtime:'Proteção em Tempo Real', analytics:'Analytics', game:'Modo Jogo', quarantine:'Quarentena', reports:'Relatórios', updates:'Atualizações', settings:'Definições', about:'Sobre' },
+      en: { dashboard:'Dashboard', scans:'Scans', realtime:'Real-time Protection', analytics:'Analytics', game:'Game Mode', quarantine:'Quarantine', reports:'Reports', updates:'Updates', settings:'Settings', about:'About' }
+    };
+
+    // ===================== STATE =====================
+    const DEFAULT_STATE = {
+      lang: 'pt', theme: 'auto', rtp: true, telemetry: false, heur: 'med',
+      engineVersion: '1.5.0-pro',
+      signatures: {
+        hashes: [
+          '275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f', // EICAR SHA256
+          '44d88612fea8a8f36de82e1278abb02f' // EICAR MD5 (informativo)
+        ],
+        patterns: ['/EICAR/']
+      },
+      logs: [],
+      quarantine: [],
+      lastUpdate: new Date().toISOString().slice(0,10),
+      schedule: { enabled: true, time: '09:00', lastRun: '' },
+      speedMs: 120,
+      game: {
+        level: 1, xp: 0, lives: 3, combo: 0, bestCombo: 0, high: 0,
+        difficulty: 'normal', sound: true, running: false, paused: false,
+        achievements: {}
+      }
+    };
+    function loadState(){ try{ const raw = localStorage.getItem('eduav-pro'); if(!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE)); const parsed = JSON.parse(raw); return Object.assign({}, DEFAULT_STATE, parsed, { signatures: Object.assign({}, DEFAULT_STATE.signatures, parsed.signatures||{}), game: Object.assign({}, DEFAULT_STATE.game, parsed.game||{}) }); }catch{ return JSON.parse(JSON.stringify(DEFAULT_STATE)); }}
+    function saveState(){ localStorage.setItem('eduav-pro', JSON.stringify(state)); }
+    let state = loadState();
+
+    // ===================== HELPERS =====================
+    const $ = s => document.querySelector(s); const $$ = s => Array.from(document.querySelectorAll(s));
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function setLang(lang){ state.lang = lang; saveState(); $$('#nav button span[data-i18n]').forEach(el => el.textContent = I18N[lang][el.getAttribute('data-i18n')]); $('#subtitle').textContent = lang==='pt'?'Antivírus — Simulação':'Antivirus — Simulation'; $('#protectText').textContent = state.rtp ? (lang==='pt'?'Protegido (simulado)':'Protected (simulated)') : (lang==='pt'?'Atenção: proteção inativa':'Warning: protection off'); $('#lastUpdate').textContent = (lang==='pt'?'Base de assinaturas: ':'Signatures DB: ')+ (state.lastUpdate||'-'); $('#rtpLabel').innerHTML = `<b>${state.rtp ? (lang==='pt'?'Ativa':'On') : (lang==='pt'?'Inativa':'Off')}</b> — <span class="muted">${lang==='pt'?'(indicador educativo)':'(educational indicator)'}</span>`; $('#rtpLabel2').innerHTML = `<b>${state.rtp ? (lang==='pt'?'Ativa':'On') : (lang==='pt'?'Inativa':'Off')}</b>`; $('#schedText').textContent = (lang==='pt'?'diário às ':'daily at ')+state.schedule.time; }
+
+    function setTheme(theme){ state.theme = theme; saveState(); const app = $('#app'); if(theme==='auto'){ const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches; app.setAttribute('data-theme', prefersDark?'dark':'light'); } else { app.setAttribute('data-theme', theme); } }
+
+    function fmtDate(d){ const dt = new Date(d); return dt.toLocaleString(state.lang==='pt'?'pt-PT':'en-US'); }
+
+    function toast(msg){ const t = document.createElement('div'); t.className='toast'; t.textContent = msg; $('#toasts').appendChild(t); setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(6px)'; }, 2500); setTimeout(()=> t.remove(), 3200); }
+
+    function openModal(title, content){ $('#modaltitle').textContent = title; $('#modalpre').textContent = content; $('#modal').style.display='flex'; }
+
+    function drawChart(){ const c = $('#threatChart'); if(!c) return; const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); const days = [...Array(7)].map((_,i)=>{ const d=new Date(); d.setDate(d.getDate()- (6-i)); d.setHours(0,0,0,0); return d; }); const counts = days.map(d => state.logs.filter(l => ['high','med'].includes(l.sev) && new Date(l.ts) >= d && new Date(l.ts) < new Date(d.getTime()+86400000)).length ); const max = Math.max(1, ...counts); const pad = 28; const w = (c.width - pad*2)/7; ctx.font='12px ui-sans-serif, system-ui'; ctx.textBaseline='middle'; for(let i=0;i<7;i++){ const x = pad + i*w + w*0.1; const barW = w*0.8; const h = ((c.height - pad*2) * counts[i] / max); const y = c.height - pad - h; ctx.fillRect(x, y, barW, h); const d = days[i]; const label = d.toLocaleDateString(state.lang==='pt'?'pt-PT':'en-US', { day:'2-digit', month:'2-digit' }); ctx.fillText(label, x, c.height - pad/2); }
+      $('#analyticsSummary').textContent = (state.lang==='pt'?'Total (7 dias): ':'Total (7 days): ') + counts.reduce((a,b)=>a+b,0);
+    }
+
+    function addLog(entry){ state.logs.unshift(Object.assign({id: crypto.randomUUID(), ts: Date.now()}, entry)); saveState(); renderLogs(); renderLast(); renderThreatsToday(); drawChart(); }
+
+    function renderLogs(filter=''){ const tbody = $('#logTable tbody'); if(!tbody) return; tbody.innerHTML = ''; const rows = state.logs.filter(l => JSON.stringify(l).toLowerCase().includes(filter.toLowerCase())); for(const log of rows.slice(0, 500)){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${fmtDate(log.ts)}</td><td>${log.type||'-'}</td><td>${log.item||'-'}</td><td>${log.threat||'-'}</td><td class="sev ${log.sev||'low'}">${(log.sev||'low').toUpperCase()}</td><td>${log.result||'-'}</td>`; tr.addEventListener('click', ()=> openModal('Log', JSON.stringify(log, null, 2))); tbody.appendChild(tr); } }
+
+    function renderLast(){ const targets = ['#lastTable tbody', '#lastTable2 tbody']; targets.forEach(sel => { const tb = $(sel); if(!tb) return; tb.innerHTML=''; for(const log of state.logs.slice(0, 8)){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${fmtDate(log.ts)}</td><td>${log.item||'-'}</td><td>${log.result||'-'}</td>`; tb.appendChild(tr);} }); }
+
+    function renderQuarantine(){ const tbody = $('#qTable tbody'); if(!tbody) return; tbody.innerHTML = ''; $('#qCount').textContent = state.quarantine.length; for(const q of state.quarantine){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${q.name}</td><td>${q.threat}</td><td>${fmtDate(q.ts)}</td><td><button class="btn ghost" data-act="restore" data-id="${q.id}">↩️ Restaurar</button> <button class="btn danger" data-act="delete" data-id="${q.id}">🗑️ Remover</button></td>`; tbody.appendChild(tr); } tbody.querySelectorAll('button').forEach(btn => btn.addEventListener('click', e => { const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act'); const idx = state.quarantine.findIndex(x => x.id===id); if(idx>=0){ const item = state.quarantine[idx]; if(act==='delete'){ state.quarantine.splice(idx,1); saveState(); addLog({type:'Quarantine', item: item.name, threat:item.threat, sev:'low', result:'Deleted'}); toast('Removido da quarentena'); } else { state.quarantine.splice(idx,1); saveState(); addLog({type:'Quarantine', item: item.name, threat:item.threat, sev:'med', result:'Restored (sim)'}); toast('Restaurado (simulado)'); } renderQuarantine(); }})); }
+
+    function renderThreatsToday(){ const start = new Date(); start.setHours(0,0,0,0); const count = state.logs.filter(l => ['high','med'].includes(l.sev) && l.ts>=start.getTime()).length; $('#threatsToday').textContent = String(count); }
+
+    function renderSigList(){ const lines = []; lines.push('Hashes (SHA256 / alguns MD5):'); for(const h of state.signatures.hashes){ lines.push(' - '+h); } lines.push('
+Padrões (RegExp):'); for(const p of state.signatures.patterns){ lines.push(' - '+p); } $('#sigList').innerText = lines.join('
+'); }
+
+    function updateStatus(){ $('#protectDot').style.background = state.rtp? 'var(--ok)':'var(--danger)'; $('#protectDot').style.boxShadow = state.rtp? '0 0 0 6px rgba(34,197,94,.15)':'0 0 0 6px rgba(239,68,68,.15)'; $('#rtpSwitch').setAttribute('data-on', state.rtp); $('#rtpSwitch2').setAttribute('data-on', state.rtp); setLang(state.lang); }
+
+    // ===================== ENGINE (toy) =====================
+    const ab2hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+    async function hashSHA256(file){ const buf = await file.arrayBuffer(); const digest = await crypto.subtle.digest('SHA-256', buf); return ab2hex(digest); }
+    async function textPreview(file){ try { const txt = await file.text(); return txt.slice(0, 1_000_000); } catch { return ''; } }
+    function matchPatterns(text){ for(const p of state.signatures.patterns){ try{ if(p.startsWith('/') && p.lastIndexOf('/')>0){ const body = p.slice(1, p.lastIndexOf('/')); const flags = p.slice(p.lastIndexOf('/')+1); const re = new RegExp(body, flags); if(state.heur==='high'){ if(re.test(text) || (text.length<20 && body.length>0)) return {pattern: p}; } else if(state.heur==='low'){ if(re.test(text) && text.length>8) return {pattern: p}; } else { if(re.test(text)) return {pattern: p}; } } }catch{} } return null; }
+    async function inspectFile(file){ const name = file.name || '(blob)'; const sha = await hashSHA256(file); const isHashMatch = state.signatures.hashes.includes(sha) || state.signatures.hashes.includes(sha.slice(0,32)); let patternHit = null; if(!isHashMatch){ const txt = await textPreview(file); patternHit = matchPatterns(txt); }
+      if(isHashMatch){ return { verdict: 'malicious', threat: 'EICAR-Test-File', sev: 'high', hash: sha }; } else if(patternHit){ return { verdict: 'suspicious', threat: `Pattern ${patternHit.pattern}`, sev: 'med', hash: sha }; } return { verdict: 'clean', threat: null, sev: 'low', hash: sha }; }
+
+    async function scanFiles(files, {progressEl, statusEl, context='Manual'} = {}){ const list = Array.from(files || []); if(list.length===0){ if(statusEl) statusEl.textContent = (state.lang==='pt'?'Nenhum ficheiro selecionado.':'No files selected.'); return; } let detectCount = 0; for(let i=0;i<list.length;i++){ const f = list[i]; statusEl && (statusEl.textContent = `${state.lang==='pt'?'A verificar:':'Scanning:'} ${f.name} (${i+1}/${list.length})…`); const res = await inspectFile(f); if(res.verdict!=='clean'){ detectCount++; const qItem = { id: crypto.randomUUID(), name: f.name, hash: res.hash, threat: res.threat, ts: Date.now() }; state.quarantine.unshift(qItem); saveState(); addLog({ type: context, item: f.name, threat: res.threat, sev: res.sev, result: 'Quarantined (sim)' }); toast(`${f.name}: ${state.lang==='pt'?'Bloqueado':'Blocked'}`); } else { addLog({ type: context, item: f.name, threat: '-', sev: 'low', result: 'Clean' }); } if(progressEl){ progressEl.style.width = (((i+1)/list.length)*100).toFixed(1)+'%'; } await sleep(state.speedMs); } statusEl && (statusEl.textContent = `${state.lang==='pt'?'Concluído. Deteções:':'Done. Detections:'} ${detectCount}`); renderQuarantine(); }
+
+    async function simulatedSweep({progressEl, statusEl, steps=22, context='Quick Scan'}){ const tasksPT = ['Memória', 'Entradas de arranque', 'Processos (sim)', 'Registo (sim)', 'Caminhos comuns', 'Cache do navegador', 'Ferramentas do utilizador', 'Módulos carregados (sim)']; const tasksEN = ['Memory', 'Startup entries', 'Processes (sim)', 'Registry (sim)', 'Common paths', 'Browser cache', 'User tools', 'Loaded modules (sim)']; const tasks = state.lang==='pt' ? tasksPT : tasksEN; for(let i=0;i<steps;i++){ const label = tasks[i % tasks.length]; statusEl.textContent = `${state.lang==='pt'?'A analisar':'Analyzing'}: ${label}…  (${i+1}/${steps})`; progressEl.style.width = (((i+1)/steps)*100).toFixed(1)+'%'; await sleep(state.speedMs); } addLog({ type: context, item: 'System sweep', threat: '-', sev: 'low', result: 'No threats' }); statusEl.textContent = state.lang==='pt' ? 'Concluído.' : 'Completed.'; toast(state.lang==='pt'?'Varredura concluída':'Scan completed'); }
+
+    // ===================== GAME MODE =====================
+    const game = {
+      canvas: null, ctx: null, overlay: null, last: 0, acc: 0,
+      threats: [], particles: [], levelTime: 60, timeLeft: 60, spawn: 900,
+      running: false, paused: false
+    };
+
+    function gameUpdateHUD(){ $('#hudLevel').textContent = state.game.level; $('#hudXP').textContent = state.game.xp; $('#hudLives').textContent = state.game.lives; $('#hudCombo').textContent = 'x'+state.game.combo; $('#hudTime').textContent = Math.max(0, Math.ceil(game.timeLeft)); $('#hudHigh').textContent = state.game.high; $('#hudBestCombo').textContent = state.game.bestCombo; renderAchievements(); }
+
+    function gameSetDifficulty(d){ state.game.difficulty = d; saveState(); const map = { easy: 1000, normal: 900, hard: 700 }; game.spawn = map[d] || 900; toast('Dificuldade: ' + d); }
+
+    function gameSoundOn(){ return !!state.game.sound; }
+
+    function gameBeep(type='ok'){ if(!gameSoundOn()) return; try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type = 'square'; o.frequency.value = type==='hit'? 560 : type==='miss'? 180 : type==='level'? 760 : 320; o.connect(g); g.connect(ctx.destination); g.gain.value = 0.02; o.start(); setTimeout(()=>{ o.stop(); ctx.close(); }, 140); }catch{} }
+
+    function rand(min,max){ return Math.random()*(max-min)+min; }
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+    function spawnThreat(){ const c = game.canvas; if(!c) return; const types = ['virus','worm','trojan']; const t = { id: crypto.randomUUID(), type: pick(types), x: rand(20, c.width-20), y: -20, r: rand(12,22), vy: rand(60, 120) * (1 + (state.game.level-1)*0.05), hp: 1 };
+      // Boss every 5 levels
+      if(state.game.level % 5 === 0 && Math.random() < 0.25){ Object.assign(t, { type:'boss', r: 30, vy: rand(40,80), hp: 4 }); }
+      // Power-up rare
+      if(Math.random()<0.06){ Object.assign(t, { type:'power', r: 10, vy: rand(60,110), hp:1 }); }
+      game.threats.push(t);
+    }
+
+    function draw(){ const c = game.canvas, ctx = game.ctx; if(!c||!ctx) return; ctx.clearRect(0,0,c.width,c.height);
+      // background grid
+      ctx.globalAlpha = .15; ctx.beginPath(); for(let x=0;x<c.width;x+=40){ ctx.moveTo(x,0); ctx.lineTo(x,c.height); } for(let y=0;y<c.height;y+=40){ ctx.moveTo(0,y); ctx.lineTo(c.width,y); } ctx.stroke(); ctx.globalAlpha=1;
+      // particles
+      ctx.save(); for(const p of game.particles){ ctx.globalAlpha = p.a; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); p.x+=p.vx; p.y+=p.vy; p.a *= .96; p.r *= .98; } ctx.restore(); game.particles = game.particles.filter(p=>p.a>.05);
+      // threats
+      for(const t of game.threats){ ctx.beginPath(); ctx.lineWidth = 2; let color = 'white'; if(t.type==='virus') color = '#60a5fa'; if(t.type==='worm') color = '#34d399'; if(t.type==='trojan') color = '#fbbf24'; if(t.type==='boss') color = '#ef4444'; if(t.type==='power') color = '#a78bfa'; ctx.strokeStyle=color; ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.arc(t.x,t.y,t.r,0,Math.PI*2); ctx.fill(); ctx.stroke(); if(t.type==='boss'){ ctx.fillStyle=color; ctx.fillRect(t.x- t.r, t.y- t.r-10, (t.hp/4)*t.r*2, 4); }
+      }
+    }
+
+    function step(ts){ if(!game.running || game.paused) { game.last = ts; requestAnimationFrame(step); return; } const dt = Math.min(0.032, (ts - game.last)/1000 || 0); game.last = ts; game.timeLeft -= dt; // time
+      // spawn
+      game.acc += dt*1000; const interval = Math.max(300, game.spawn - (state.game.level-1)*20); if(game.acc > interval){ game.acc = 0; spawnThreat(); }
+      // move threats
+      const c = game.canvas; for(const t of game.threats){ t.y += t.vy*dt; }
+      // check miss
+      const missed = game.threats.filter(t => t.y - t.r > c.height); if(missed.length){ state.game.lives -= missed.length; state.game.combo = 0; addLog({type:'Game', item:`${missed.length} escaped`, threat:'—', sev:'low', result:'Miss'}); gameBeep('miss'); game.threats = game.threats.filter(t => t.y - t.r <= c.height); if(state.game.lives<=0){ gameOver(); return; } }
+      // next level
+      if(game.timeLeft <= 0){ state.game.level++; state.game.xp += 50; game.levelTime = Math.max(30, 60 - (state.game.level-1)); game.timeLeft = game.levelTime; gameBeep('level'); toast('Nível '+state.game.level); addLog({type:'Game', item:'LevelUp', threat:'—', sev:'low', result:'Level '+state.game.level}); }
+      draw(); gameUpdateHUD(); requestAnimationFrame(step); }
+
+    function gameStart(){ if(!game.canvas){ game.canvas = $('#gameCanvas'); game.ctx = game.canvas.getContext('2d'); game.overlay = $('#gameOverlay'); game.canvas.addEventListener('click', onCanvasClick); window.addEventListener('resize', resizeCanvas); resizeCanvas(); }
+      state.game.level = state.game.level||1; game.timeLeft = game.levelTime; game.running = true; game.paused = false; game.overlay.hidden = true; game.last = performance.now(); requestAnimationFrame(step); toast('Jogo iniciado'); }
+
+    function gamePauseToggle(){ if(!game.running) return; game.paused = !game.paused; $('#btnGamePause').textContent = game.paused ? '▶️ Retomar' : '⏸️ Pausar'; game.overlay.hidden = !game.paused; game.overlay.textContent = game.paused ? 'Pausado' : ''; }
+
+    function gameReset(){ game.threats = []; game.particles = []; state.game.level = 1; state.game.xp = 0; state.game.lives = 3; state.game.combo = 0; game.levelTime = 60; game.timeLeft = 60; game.running = false; game.paused = false; $('#btnGamePause').textContent = '⏸️ Pausar'; $('#gameOverlay').hidden = false; $('#gameOverlay').textContent = 'Pressione ▶️ Começar'; draw(); gameUpdateHUD(); toast('Reiniciado'); }
+
+    function gameOver(){ game.running = false; game.paused = false; $('#gameOverlay').hidden = false; $('#gameOverlay').textContent = 'Fim de Jogo'; state.game.high = Math.max(state.game.high, state.game.xp); saveState(); toast('Fim de jogo — XP: '+state.game.xp); addLog({type:'Game', item:'GameOver', threat:'—', sev:'low', result:'XP '+state.game.xp}); }
+
+    function resizeCanvas(){ const c = game.canvas; if(!c) return; const rect = c.getBoundingClientRect(); c.width = rect.width; c.height = rect.height; draw(); }
+
+    function onCanvasClick(ev){ const rect = game.canvas.getBoundingClientRect(); const x = ev.clientX - rect.left; const y = ev.clientY - rect.top; // hit test from topmost
+      for(let i=game.threats.length-1; i>=0; i--){ const t = game.threats[i]; const dx = x - t.x, dy = y - t.y; if(dx*dx + dy*dy <= t.r*t.r){ // hit
+          if(t.type==='power'){ state.game.lives = Math.min(5, state.game.lives+1); game.particles.push({x:t.x,y:t.y,r:10,vx:0,vy:0,a:.8}); toast('Power-up: +1 vida'); gameBeep('ok'); game.threats.splice(i,1); return; }
+          t.hp--; state.game.combo++; state.game.bestCombo = Math.max(state.game.bestCombo, state.game.combo);
+          game.particles.push({x:t.x,y:t.y,r: t.r, vx: rand(-40,40)*.02, vy: rand(-40,40)*.02, a:.6});
+          if(t.hp<=0){ const xpGain = t.type==='boss'? 20 : 10; state.game.xp += xpGain; const name = `${t.type.toUpperCase()}-${String(t.id).slice(0,6)}`; const sev = t.type==='boss'? 'high' : 'med'; const threatName = t.type==='boss'? 'Game.Boss' : `Game.${t.type}`; addLog({type:'Game', item:name, threat: threatName, sev:sev, result:'Quarantined (game)'}); state.quarantine.unshift({ id: crypto.randomUUID(), name, hash: '-', threat: threatName, ts: Date.now() }); saveState(); renderQuarantine(); game.threats.splice(i,1); gameBeep('hit'); checkAchievements(); }
+          draw(); return; }
+      }
+      // miss click resets combo slightly
+      state.game.combo = Math.max(0, Math.floor(state.game.combo*0.5)); gameBeep('miss'); gameUpdateHUD(); }
+
+    function giveAchievement(key, label){ if(state.game.achievements[key]) return; state.game.achievements[key] = { ts: Date.now(), label }; saveState(); renderAchievements(); toast('Conquista: '+label); }
+
+    function checkAchievements(){ if(state.game.xp >= 50) giveAchievement('xp50','50 XP'); if(state.game.bestCombo >= 10) giveAchievement('combo10','Combo x10'); if(state.game.level >= 5) giveAchievement('lvl5','Nível 5'); }
+
+    function renderAchievements(){ const ul = $('#achList'); if(!ul) return; ul.innerHTML = ''; const keys = Object.keys(state.game.achievements); if(keys.length===0){ ul.innerHTML = '<li>Nenhuma (ainda!)</li>'; return; } for(const k of keys){ const li = document.createElement('li'); li.textContent = '🏅 '+state.game.achievements[k].label + ' — ' + fmtDate(state.game.achievements[k].ts); ul.appendChild(li); } }
+
+    // ===================== WIRING =====================
+    function switchView(view){ $$('#nav button').forEach(b => b.classList.toggle('active', b.getAttribute('data-view')===view)); $$('main > section').forEach(sec => sec.style.display = (sec.id === 'view-'+view) ? '' : 'none'); if(view==='analytics') { drawChart(); } if(view==='game'){ $('#gameOverlay').hidden = !(!game.running || game.paused); draw(); gameUpdateHUD(); } }
+
+    function bind(){
+      // Clock
+      setInterval(()=>{ const now = new Date(); $('#clock').textContent = now.toLocaleString(state.lang==='pt'?'pt-PT':'en-US'); }, 1000);
+
+      // Nav
+      $$('#nav button').forEach(btn => btn.addEventListener('click', () => switchView(btn.getAttribute('data-view'))));
+
+      // Quick actions
+      $('#btnQuickScan').addEventListener('click', () => simulatedSweep({progressEl: $('#scanProgress'), statusEl: $('#scanStatus'), steps: 26, context:'Quick Scan'}));
+      $('#btnFullScan').addEventListener('click', () => simulatedSweep({progressEl: $('#scanProgress'), statusEl: $('#scanStatus'), steps: 60, context:'Full Scan'}));
+      $('#fileInput').addEventListener('change', e => scanFiles(e.target.files, {progressEl: $('#scanProgress'), statusEl: $('#scanStatus'), context: 'Manual'}));
+      $('#speedRange').addEventListener('input', e => { state.speedMs = Number(e.target.value); saveState(); });
+
+      // Scan center
+      $('#scanQuick2').addEventListener('click', () => simulatedSweep({progressEl: $('#scanProgress2'), statusEl: $('#scanStatus2'), steps: 26, context:'Quick Scan'}));
+      $('#scanFull2').addEventListener('click', () => simulatedSweep({progressEl: $('#scanProgress2'), statusEl: $('#scanStatus2'), steps: 60, context:'Full Scan'}));
+      $('#fileInput2').addEventListener('change', e => scanFiles(e.target.files, {progressEl: $('#scanProgress2'), statusEl: $('#scanStatus2'), context: 'Manual'}));
+
+      // RTP
+      const toggleRTP = () => { state.rtp = !state.rtp; saveState(); updateStatus(); addLog({type:'RTP', item:'Toggle', sev:'low', result: state.rtp?'ON':'OFF'}); toast('RTP: '+(state.rtp?'ON':'OFF')); };
+      $('#rtpSwitch').addEventListener('click', toggleRTP); $('#rtpSwitch2').addEventListener('click', toggleRTP);
+      $('#rtpSwitch').addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleRTP(); }});
+      $('#rtpSwitch2').addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleRTP(); }});
+
+      // RTP file open
+      $('#fileInputRTP').addEventListener('change', async e => { const out = $('#rtpResult'); out.innerHTML = ''; const f = e.target.files?.[0]; if(!f){ return; } if(!state.rtp){ out.innerHTML = `<span class=\"sev high\">${state.lang==='pt'?'Proteção inativa — ficheiro não verificado.':'Protection is OFF — file not scanned.'}</span>`; return; } out.innerText = state.lang==='pt' ? 'A verificar…' : 'Checking…'; const res = await inspectFile(f); if(res.verdict==='malicious' || res.verdict==='suspicious'){ const qItem = { id: crypto.randomUUID(), name: f.name, hash: res.hash, threat: res.threat, ts: Date.now() }; state.quarantine.unshift(qItem); saveState(); renderQuarantine(); addLog({ type: 'RTP', item: f.name, threat: res.threat, sev: res.sev, result: 'Blocked (sim)' }); out.innerHTML = `<span class=\"sev ${res.sev}\">${state.lang==='pt'?'Bloqueado':'Blocked'}:</span> ${res.threat}`; toast(`${f.name}: ${state.lang==='pt'?'Bloqueado':'Blocked'}`); } else { addLog({ type: 'RTP', item: f.name, threat: '-', sev: 'low', result: 'Allowed' }); out.innerHTML = `<span class=\"sev low\">${state.lang==='pt'?'Limpo':'Clean'}</span>`; toast(`${f.name}: OK`); } });
+
+      // Reports
+      $('#btnExport').addEventListener('click', () => { const blob = new Blob([JSON.stringify(state.logs, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `eduav-logs-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('JSON exportado'); });
+      $('#btnClearLogs').addEventListener('click', () => { if(confirm(state.lang==='pt'?'Limpar registos?':'Clear logs?')){ state.logs=[]; saveState(); renderLogs(); renderLast(); renderThreatsToday(); drawChart(); toast('Registos limpos'); }});
+
+      // Quarantine export
+      $('#btnExportQ').addEventListener('click', () => { const blob = new Blob([JSON.stringify(state.quarantine, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `eduav-quarantine-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('Quarentena exportada'); });
+
+      // Updates / Sigs
+      $('#btnAddSig').addEventListener('click', () => { const v = $('#sigInput').value.trim(); if(!v) return; if(/^[0-9a-f]{64}$/i.test(v) || /^[0-9a-f]{32}$/i.test(v)){ state.signatures.hashes.push(v.toLowerCase()); addLog({type:'Update', item:'Signature', sev:'low', result:'Hash added'}); toast('Hash adicionado'); } else if(v.startsWith('/') && v.lastIndexOf('/')>0){ state.signatures.patterns.push(v); addLog({type:'Update', item:'Signature', sev:'low', result:'Pattern added'}); toast('Padrão adicionado'); } else { alert(state.lang==='pt'?'Insira um SHA256/MD5 ou uma expressão regular (/padrão/flags)':'Enter SHA256/MD5 or a regular expression (/pattern/flags)'); return; } state.lastUpdate = new Date().toISOString().slice(0,10); saveState(); renderSigList(); setLang(state.lang); $('#sigInput').value=''; });
+      $('#btnSimFeed').addEventListener('click', () => { const rx = '/Alien(\s*Tech|\s*Tecnologia)|Nuclear|Avan(ç|c)os/i'; if(!state.signatures.patterns.includes(rx)) state.signatures.patterns.push(rx); addLog({type:'Feed', item:'Fictional.AI.AlienTech.Nuclear.Advances', sev:'low', result:'Patterns added'}); state.lastUpdate = new Date().toISOString().slice(0,10); saveState(); renderSigList(); setLang(state.lang); toast('Feed simulado aplicado'); });
+      $('#btnExportSigs').addEventListener('click', () => { const blob = new Blob([JSON.stringify(state.signatures, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `eduav-signatures-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('Assinaturas exportadas'); });
+      $('#sigImport').addEventListener('change', async e => { const f = e.target.files?.[0]; if(!f) return; const txt = await f.text(); try{ const sig = JSON.parse(txt); if(sig.hashes && Array.isArray(sig.hashes)) state.signatures.hashes = sig.hashes; if(sig.patterns && Array.isArray(sig.patterns)) state.signatures.patterns = sig.patterns; state.lastUpdate = new Date().toISOString().slice(0,10); saveState(); renderSigList(); setLang(state.lang); toast('Assinaturas importadas'); }catch{ alert('JSON inválido'); } });
+
+      // Settings
+      $('#themeSel').value = state.theme; $('#themeSel').addEventListener('change', e => setTheme(e.target.value));
+      $('#langSel').value = state.lang; $('#langSel').addEventListener('change', e => setLang(e.target.value));
+      $('#heurSel').value = state.heur; $('#heurSel').addEventListener('change', e => { state.heur = e.target.value; saveState(); toast('Heurística: '+state.heur); });
+      const toggleTele = () => { state.telemetry = !state.telemetry; saveState(); addLog({type:'Settings', item:'Telemetry', sev:'low', result: state.telemetry?'ON':'OFF'}); toast('Telemetria: '+(state.telemetry?'ON':'OFF')); };
+      $('#teleSwitch').setAttribute('data-on', state.telemetry); $('#teleSwitch').addEventListener('click', toggleTele);
+      $('#btnReset').addEventListener('click', () => { if(confirm(state.lang==='pt'?'Isto vai limpar todos os dados locais. Continuar?':'This will clear all local data. Continue?')){ localStorage.removeItem('eduav-pro'); state = loadState(); setTheme(state.theme); setLang(state.lang); updateStatus(); renderAll(); toast('Reposto'); } });
+
+      // Scheduling
+      $('#schedTime').value = state.schedule.time; $('#btnSaveSched').addEventListener('click', ()=>{ state.schedule.time = $('#schedTime').value || '09:00'; state.schedule.enabled = true; saveState(); setLang(state.lang); toast('Agendamento guardado'); });
+      $('#btnRunNow').addEventListener('click', ()=> simulatedSweep({progressEl: $('#scanProgress'), statusEl: $('#scanStatus'), steps: 26, context:'Scheduled (manual)'}));
+      setInterval(()=>{ if(!state.schedule.enabled) return; const now = new Date(); const hh = String(now.getHours()).padStart(2,'0'); const mm = String(now.getMinutes()).padStart(2,'0'); const cur = hh+':'+mm; const todayStr = now.toISOString().slice(0,10); if(cur===state.schedule.time && state.schedule.lastRun!==todayStr){ state.schedule.lastRun = todayStr; saveState(); simulatedSweep({progressEl: $('#scanProgress'), statusEl: $('#scanStatus'), steps: 20, context:'Scheduled'}); toast('Scan agendado iniciado'); } }, 30_000);
+
+      // Sorting tables
+      function makeSortable(tableSel){ const table = $(tableSel); if(!table) return; table.querySelectorAll('th[data-col]').forEach(th => { th.addEventListener('click', ()=>{ const col = th.getAttribute('data-col'); const dir = th.getAttribute('data-dir')==='asc'?'desc':'asc'; th.setAttribute('data-dir', dir); const rows = Array.from(table.querySelectorAll('tbody tr')); rows.sort((a,b)=>{ const idx = Array.from(th.parentNode.children).indexOf(th); const ai = Array.from(a.children)[idx].textContent; const bi = Array.from(b.children)[idx].textContent; if(col==='ts'){ return dir==='asc' ? new Date(ai)-new Date(bi) : new Date(bi)-new Date(ai); } return dir==='asc' ? ai.localeCompare(bi) : bi.localeCompare(ai); }); const tb = table.querySelector('tbody'); tb.innerHTML=''; rows.forEach(r => tb.appendChild(r)); }); }); }
+      makeSortable('#logTable'); makeSortable('#qTable'); makeSortable('#lastTable'); makeSortable('#lastTable2');
+
+      // Search filter
+      $('#logSearch')?.addEventListener('input', e => renderLogs(e.target.value));
+
+      // Modal close
+      $('#btnCloseModal').addEventListener('click', ()=> $('#modal').style.display='none');
+
+      // Keyboard shortcuts (global)
+      window.addEventListener('keydown', e => {
+        if(e.key==='?'){ e.preventDefault(); openModal('Atalhos', 'Q: Scan rápido
+F: Scan completo
+/: Procurar logs (aba Analytics)
+G R: Ir para Relatórios
+G S: Ir para Definições
+SPACE: Pausar/Retomar (Jogo)
+R: Reiniciar (Jogo)'); }
+        if(e.key.toLowerCase()==='q'){ $('#btnQuickScan')?.click(); }
+        if(e.key.toLowerCase()==='f'){ $('#btnFullScan')?.click(); }
+        if(e.key==='/'){ const s=$('#logSearch'); if(s){ switchView('analytics'); setTimeout(()=> s.focus(), 50); e.preventDefault(); } }
+        if(e.key.toLowerCase()==='g'){ window.__g_pressed = true; setTimeout(()=> window.__g_pressed = false, 600); }
+        if(window.__g_pressed && e.key.toLowerCase()==='r'){ switchView('reports'); }
+        if(window.__g_pressed && e.key.toLowerCase()==='s'){ switchView('settings'); }
+        if(e.code==='Space'){ if($('section#view-game').style.display!=='none'){ e.preventDefault(); gamePauseToggle(); } }
+        if(e.key.toLowerCase()==='r'){ if($('section#view-game').style.display!=='none'){ gameReset(); } }
+      });
+
+      // Drag-n-drop for file inputs (labels)
+      ['fileInput','fileInput2','fileInputRTP'].forEach(id => { const input = document.getElementById(id); const label = input.previousElementSibling?.tagName==='LABEL'? input.previousElementSibling : null; if(label){ label.addEventListener('dragover', e => { e.preventDefault(); label.style.outline='2px dashed var(--brand)'; }); label.addEventListener('dragleave', () => { label.style.outline='none'; }); label.addEventListener('drop', e => { e.preventDefault(); label.style.outline='none'; const dt = e.dataTransfer; if(!dt) return; input.files = dt.files; input.dispatchEvent(new Event('change')); }); } });
+
+      // Game controls
+      $('#btnGameStart').addEventListener('click', gameStart);
+      $('#btnGamePause').addEventListener('click', gamePauseToggle);
+      $('#btnGameReset').addEventListener('click', gameReset);
+      $('#gameDiff').value = state.game.difficulty; $('#gameDiff').addEventListener('change', e => gameSetDifficulty(e.target.value)); gameSetDifficulty(state.game.difficulty);
+      $('#gameSound').setAttribute('data-on', state.game.sound); $('#gameSound').addEventListener('click', ()=>{ state.game.sound = !state.game.sound; saveState(); $('#gameSound').setAttribute('data-on', state.game.sound); toast('Som: '+(state.game.sound?'ON':'OFF')); });
+      $('#btnSaveScore').addEventListener('click', ()=>{ state.game.high = Math.max(state.game.high, state.game.xp); saveState(); toast('Pontuação guardada'); gameUpdateHUD(); });
+      $('#btnExportSession').addEventListener('click', ()=>{ const data = { game: state.game, logs: state.logs.filter(l=>l.type==='Game') }; const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `eduav-game-session-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('Sessão exportada'); });
+    }
+
+    function renderAll(){ renderLogs(); renderLast(); renderQuarantine(); renderThreatsToday(); renderSigList(); $('#engineVer').innerText = state.engineVersion; drawChart(); gameUpdateHUD(); renderAchievements(); }
+
+    // ===================== BOOT =====================
+    (function boot(){ bind(); setTheme(state.theme); setLang(state.lang); updateStatus(); renderAll(); $('#lastUpdate').textContent = (state.lang==='pt'?'Base de assinaturas: ':'Signatures DB: ')+ (state.lastUpdate||'-'); $('#gameOverlay').hidden = false; })();
+  </script>
 </body>
 </html>
