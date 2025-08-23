@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Perfil — Lumo</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <ul>
+      <li><a href="feed.html">📝 Feed</a></li>
+      <li><a href="perfil.html">👤 Perfil</a></li>
+      <li><a href="manifesto.html">📜 Manifesto</a></li>
+      <li><a href="diario.html">📓 Diário</a></li>
+      <li><a href="registro.html">🔐 Sair</a></li>
+    </ul>
+  </nav>
+  <div class="container">
+    <h2>👤 O teu espaço pessoal</h2>
+    <div id="stats"></div>
+  </div>
+  <script>
+    const posts = JSON.parse(localStorage.getItem('posts') || '[]');
+    const stats = `
+      <p>Desabafos publicados: ${posts.length}</p>
+      <p>Primeiro desabafo: ${posts[posts.length - 1]?.date || '—'}</p>
+    `;
+    document.getElementById('stats').innerHTML = stats;
+  </script>
+</body>
+</html>

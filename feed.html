@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Feed — Lumo</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <ul>
+      <li><a href="feed.html">📝 Feed</a></li>
+      <li><a href="perfil.html">👤 Perfil</a></li>
+      <li><a href="manifesto.html">📜 Manifesto</a></li>
+      <li><a href="diario.html">📓 Diário</a></li>
+      <li><a href="registro.html">🔐 Sair</a></li>
+    </ul>
+  </nav>
+  <div class="container">
+    <button id="toggleTheme">🌙 Mudar tema</button>
+    <h2>📝 Desabafa com leveza</h2>
+    <form id="postForm">
+      <textarea id="postText" placeholder="Escreve o que sentes..." required></textarea>
+      <label for="circle">Partilhar com:</label>
+      <select id="circle">
+        <option value="publico">Todos</option>
+        <option value="meuCirculo">Meu círculo</option>
+      </select>
+      <button type="submit">Publicar</button>
+    </form>
+    <div id="feed"></div>
+  </div>
+  <script src="js/main.js"></script>
+</body>
+</html>

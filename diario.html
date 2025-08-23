@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Diário — Lumo</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <ul>
+      <li><a href="feed.html">📝 Feed</a></li>
+      <li><a href="perfil.html">👤 Perfil</a></li>
+      <li><a href="manifesto.html">📜 Manifesto</a></li>
+      <li><a href="diario.html">📓 Diário</a></li>
+      <li><a href="registro.html">🔐 Sair</a></li>
+    </ul>
+  </nav>
+  <div class="container">
+    <h2>📓 Diário Pessoal</h2>
+    <form id="diarioForm">
+      <textarea id="diarioTexto" placeholder="Escreve só para ti..." required></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div id="notasPrivadas"></div>
+  </div>
+  <script src="js/main.js"></script>
+</body>
+</html>
