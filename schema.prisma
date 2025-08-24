@@ -1,0 +1,199 @@
+
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+enum Role { user admin }
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  passwordHash  String
+  displayName   String
+  handle        String   @unique
+  avatarUrl     String?
+  bio           String?  @db.VarChar(160)
+  birthYear     Int?
+  settings      Json?
+  role          Role     @default(user)
+  deactivated   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  posts         Post[]
+  comments      Comment[]
+  reactions     Reaction[]
+  circles       Circle[] @relation("UserCircles")
+  memberships   CircleMembership[]
+  conversations ConversationMember[]
+  messages      Message[]
+  verifyTokens  VerifyToken[]
+  followers     Follow[] @relation("followers")
+  following     Follow[] @relation("following")
+  notifications Notification[]
+  pushSubs      PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  @@unique([userId, endpoint])
+}
+
+model Follow {
+  id           String @id @default(cuid())
+  follower     User   @relation("followers", fields: [followerId], references: [id])
+  followerId   String
+  following    User   @relation("following", fields: [followingId], references: [id])
+  followingId  String
+  createdAt    DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model VerifyToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Circle {
+  id        String  @id @default(cuid())
+  name      String
+  owner     User    @relation(fields: [ownerId], references: [id])
+  ownerId   String
+  members   CircleMembership[]
+  createdAt DateTime @default(now())
+  posts     Post[]
+}
+
+model CircleMembership {
+  id        String @id @default(cuid())
+  circle    Circle @relation(fields: [circleId], references: [id])
+  circleId  String
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+  role      String @default("member")
+  createdAt DateTime @default(now())
+
+  @@unique([circleId, userId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  text      String
+  mood      String
+  audience  String
+  circle    Circle?  @relation(fields: [circleId], references: [id])
+  circleId  String?
+  mediaUrl  String?
+  chain     Chain?
+  chainId   String?
+  createdAt DateTime @default(now())
+  removedAt DateTime?
+  comments  Comment[]
+  reactions Reaction[]
+}
+
+model Chain {
+  id         String   @id @default(cuid())
+  prompt     String
+  deadline   DateTime
+  createdAt  DateTime @default(now())
+  posts      Post[]
+  nodes      ChainNode[]
+}
+
+model ChainNode {
+  id        String   @id @default(cuid())
+  chain     Chain    @relation(fields: [chainId], references: [id])
+  chainId   String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  text      String   @db.VarChar(140)
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+  removedAt DateTime?
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  kind      String   @default("like")
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId, kind])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  targetId  String
+  reason    String
+  source    String   @default("user") // user|ai
+  score     Float?
+  notes     String?
+  reporter  User?    @relation(fields: [reporterId], references: [id])
+  reporterId String?
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  id             String   @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  author         User     @relation(fields: [authorId], references: [id])
+  authorId       String
+  text           String
+  createdAt      DateTime @default(now())
+}
