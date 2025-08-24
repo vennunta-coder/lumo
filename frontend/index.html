@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="pt"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="./manifest.webmanifest">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js')}</script>
+<title>LUMI — Apex (Realtime)</title>
+<style>
+:root{--bg:#0f1220;--panel:#171a2b;--soft:#222641;--text:#e9ecff;--muted:#b9c0ff;--accent:#8ef3ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+header{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #262a44;background:#11152b}
+.wrap{max-width:1220px;margin:0 auto;padding:0 12px;width:100%;display:flex;justify-content:space-between;align-items:center}
+.card{background:#171a2b;border:1px solid #262a44;border-radius:16px;box-shadow:0 8px 18px rgba(0,0,0,.25);padding:12px}
+main{max-width:1220px;margin:16px auto;padding:0 12px;display:grid;grid-template-columns:280px 1fr 360px;gap:16px}
+@media (max-width:1150px){main{grid-template-columns:1fr}}
+textarea{width:100%;min-height:80px;background:#222641;color:#e9ecff;border:1px solid #2e335a;border-radius:12px;padding:10px}
+button{background:#222c5a;border:1px solid #2e335a;border-radius:10px;color:#e9ecff;padding:10px 14px;cursor:pointer}
+input,select{background:#222641;border:1px solid #2e335a;color:#e9ecff;border-radius:10px;padding:10px}
+.post{display:grid;grid-template-columns:54px 1fr;gap:12px;padding:12px;border-top:1px solid #262a44}
+.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6cf,#a8f);color:#0b0f1e;font-weight:800}
+.meta{color:#b9c0ff;font-size:12px;display:flex;gap:8px}
+a{color:#8ef3ff}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div><b>LUMI Apex</b> — <span id="who"></span></div><div><a href="./admin.html" target="_blank">Admin</a> · <a href="http://localhost:4000/docs" target="_blank">API Docs</a></div></div></header>
+<main>
+  <aside class="card">
+    <h3>Conta</h3>
+    <input id="email" placeholder="email" style="width:100%;margin-bottom:8px">
+    <input id="password" placeholder="senha" type="password" style="width:100%;margin-bottom:8px">
+    <input id="displayName" placeholder="nome" style="width:100%;margin-bottom:8px">
+    <input id="handle" placeholder="handle (ex: pedro.f)" style="width:100%;margin-bottom:8px">
+    <button onclick="register()">Criar conta</button>
+    <button onclick="login()">Entrar</button>
+    <div style="margin-top:8px"><button onclick="enablePush()">🔔 Ativar notificações</button></div>
+
+    <h3 style="margin-top:16px">DMs</h3>
+    <div style="display:flex;gap:6px"><input id="dmUser" placeholder="userId"><button onclick="inviteDM()">Convidar</button></div>
+    <div id="convos" style="margin-top:8px"></div>
+  </aside>
+
+  <section>
+    <div class="card">
+      <h3>Novo Post</h3>
+      <textarea id="composer" maxlength="280" placeholder="Diz algo..."></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <select id="mood"><option>🎧 focado</option><option>😄 feliz</option><option>😴 cansado</option><option>🤝 colaborativo</option></select>
+        <select id="aud"><option>Amigos</option><option>Circulos</option><option>Publico</option></select>
+        <input type="file" id="media" accept="image/*,video/*">
+        <button onclick="publish()">Publicar</button>
+      </div>
+    </div>
+    <div class="card" id="feed"><h3>Feed</h3></div>
+    <div class="card" id="dmBox" style="display:none">
+      <h3>DM</h3>
+      <div id="messages" style="max-height:240px;overflow:auto;background:#11152b;border-radius:12px;padding:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:8px"><input id="dmText" placeholder="Escreva..." style="flex:1"><button onclick="sendDM()">Enviar</button></div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h3>Notificações</h3>
+    <div id="notifs"></div>
+  </aside>
+</main>
+
+<script>
+const API=(p)=>'http://localhost:4000'+p;
+let token=localStorage.getItem('token')||'', me=JSON.parse(localStorage.getItem('me')||'null');
+let currentConvoId=null, sse=null;
+
+function setMe(u){ me=u; localStorage.setItem('me', JSON.stringify(u)); document.getElementById('who').textContent = me?('@'+me.handle):'não autenticado'; }
+setMe(me);
+
+async function register(){ const email=v('email'), password=v('password'), displayName=v('displayName')||'Utilizador', handle=v('handle')||('user'+Math.floor(Math.random()*10000)); const r=await fetch(API('/auth/register'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,displayName,handle})}); alert(r.ok?'Conta criada!':'Falhou'); }
+async function login(){ const email=v('email'), password=v('password'); const r=await fetch(API('/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})}); const d=await r.json(); if(r.ok){ token=d.token; localStorage.setItem('token', token); setMe(d.user); await loadConvos(); await loadFeed(); await loadNotifs(); connectSSE(); } else alert('Login falhou');}
+
+function connectSSE(){ if(sse) sse.close(); sse = new EventSource(API('/realtime/stream?token=')+encodeURIComponent(token)); sse.addEventListener('notification', ev=>{ const n=JSON.parse(ev.data); pushNotif(n.type+': '+JSON.stringify(n)); }); sse.addEventListener('dm_message', ev=>{ const m=JSON.parse(ev.data); if(currentConvoId===m.conversationId) addMsg(m); pushNotif('DM: '+m.text); }); sse.addEventListener('dm_invite', ev=>{ pushNotif('Convite DM: '+ev.data); loadConvos(); }); }
+
+async function enablePush(){ const perm=await Notification.requestPermission(); if(perm!=='granted') return alert('Permissão negada'); const reg=await navigator.serviceWorker.getRegistration(); let key=(await (await fetch(API('/push/public-key'))).json()).key; if(!key) return alert('Servidor sem VAPID'); function urlB64ToUint8Array(b){const p='='.repeat((4-b.length%4)%4);const b64=(b+p).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);return out;} const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(key)}); await fetch(API('/push/subscribe'),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(sub)}); alert('Push ativo!'); }
+
+async function publish(){ const text=v('composer'); if(!text) return; const mood=v('mood'), audience=v('aud'); const media=document.getElementById('media').files[0]; let mediaUrl=null; if(media){ const fd=new FormData(); fd.append('file', media); const up=await fetch(API('/media/upload'),{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd}); const d=await up.json(); mediaUrl=d.url||d.publicUrl||null; } const r=await fetch(API('/posts'),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({text,mood,audience,mediaUrl})}); if(r.ok){ document.getElementById('composer').value=''; document.getElementById('media').value=''; loadFeed(); } else alert('Erro ao publicar'); }
+
+async function loadFeed(){ if(!token) return; const r=await fetch(API('/feed'),{headers:{'Authorization':'Bearer '+token}}); const posts=await r.json(); const feed=document.getElementById('feed'); feed.innerHTML='<h3>Feed</h3>'; posts.forEach(p=>{ const el=document.createElement('div'); el.className='post'; el.innerHTML=\`
+  <div class="avatar">\${(p.author.displayName||'U').slice(0,2).toUpperCase()}</div>
+  <div><div class="meta"><b>\${p.author.displayName}</b> @\${p.author.handle} · \${new Date(p.createdAt).toLocaleString()}</div>
+  <div>\${escapeHtml(p.text)}</div>\${p.mediaUrl?'<div style="margin-top:8px"><img src="'+p.mediaUrl+'" style="max-width:100%;border-radius:12px;border:1px solid #2e335a"></div>':''}</div>\`; feed.appendChild(el); }); }
+
+async function loadConvos(){ const r=await fetch(API('/dms'),{headers:{'Authorization':'Bearer '+token}}); const list=await r.json(); const box=document.getElementById('convos'); box.innerHTML=''; list.forEach(c=>{ const el=document.createElement('div'); el.innerHTML='<button onclick="openDM(\''+c.id+'\')">Abrir '+c.id+' ('+c.status+')</button>'; box.appendChild(el); }); }
+async function inviteDM(){ const to=v('dmUser'); const r=await fetch(API('/dms/invite'),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({toUserId:to})}); if(r.ok){ loadConvos(); alert('Convite enviado!'); } }
+async function openDM(id){ currentConvoId=id; document.getElementById('dmBox').style.display='block'; const r=await fetch(API('/dms/'+id+'/messages'),{headers:{'Authorization':'Bearer '+token}}); const msgs=await r.json(); const box=document.getElementById('messages'); box.innerHTML=''; msgs.forEach(addMsg); }
+function addMsg(m){ const box=document.getElementById('messages'); const el=document.createElement('div'); el.textContent=(m.authorId===me.id?'eu: ':'ele: ')+m.text; box.appendChild(el); box.scrollTop=box.scrollHeight; }
+async function sendDM(){ const text=v('dmText'); if(!text||!currentConvoId) return; const r=await fetch(API('/dms/'+currentConvoId+'/messages'),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({text})}); if(r.ok){ document.getElementById('dmText').value=''; const m=await r.json(); addMsg(m); } }
+
+async function loadNotifs(){ if(!token) return; const r=await fetch(API('/notifications'),{headers:{'Authorization':'Bearer '+token}}); const list=await r.json(); document.getElementById('notifs').innerHTML = list.map(n=>'<div><small>'+new Date(n.createdAt).toLocaleString()+'</small> <code>'+n.type+'</code> '+JSON.stringify(n.payload)+'</div>').join(''); }
+
+function pushNotif(t){ const el=document.createElement('div'); el.textContent=new Date().toLocaleTimeString()+' — '+t; document.getElementById('notifs').prepend(el); }
+function v(id){ return document.getElementById(id).value.trim(); }
+function escapeHtml(s=''){ return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+if(token){ loadConvos(); loadFeed(); loadNotifs(); connectSSE(); }
+</script>
+</body></html>
